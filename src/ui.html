@@ -76,6 +76,23 @@
     button:hover { background: #fff; }
     button:disabled { background: #333; color: #666; cursor: not-allowed; }
 
+    .btn-download {
+      width: 100%;
+      padding: 0.65rem;
+      background: transparent;
+      color: #aaa;
+      border: 1px solid #333;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+      text-align: center;
+      text-decoration: none;
+      display: block;
+    }
+    .btn-download:hover { border-color: #888; color: #fff; }
+
     .status { font-size: 0.78rem; color: #666; text-align: center; min-height: 1em; }
     .status.error { color: #e07070; }
 
@@ -184,6 +201,7 @@
     </div>
 
     <button id="btn" disabled>Clean</button>
+    <a id="downloadBtn" class="btn-download" style="display:none">Download</a>
     <div class="status" id="status"></div>
   </aside>
 
@@ -210,6 +228,7 @@
     const cleanedImg        = document.getElementById('cleanedImg');
     const originalPlaceholder = document.getElementById('originalPlaceholder');
     const cleanedPlaceholder  = document.getElementById('cleanedPlaceholder');
+    const downloadBtn       = document.getElementById('downloadBtn');
 
     let selectedFile = null;
     let debounceTimer = null;
@@ -236,6 +255,7 @@
       cleanedImg.style.display = 'none';
       cleanedPlaceholder.style.display = 'flex';
       cleanedPlaceholder.textContent = 'Result will appear here';
+      downloadBtn.style.display = 'none';
       status.textContent = '';
       status.className = 'status';
       scheduleClean();
@@ -312,6 +332,11 @@
         cleanedImg.style.display = 'block';
         cleanedPlaceholder.style.display = 'none';
         status.textContent = 'Done.';
+
+        const base = selectedFile.name.replace(/(\.[^.]+)$/, '_cleaned$1');
+        downloadBtn.href = URL.createObjectURL(blob);
+        downloadBtn.download = base;
+        downloadBtn.style.display = 'block';
       } catch (e) {
         if (e.name !== 'AbortError') {
           status.textContent = e.message;

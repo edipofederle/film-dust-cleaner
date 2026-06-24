@@ -90,7 +90,7 @@ Start a local web UI with live before/after preview and real-time controls.
 film-dust-cleaner serve [--port 3000]
 ```
 
-Open `http://localhost:3000` in your browser. All parameters are available as sliders and update the result automatically.
+Open `http://localhost:3000` in your browser. All parameters are available as sliders and update the result automatically. Once processed, a **Download** button appears to save the cleaned image locally (saved as `<original_name>_cleaned.jpg`).
 
 ---
 

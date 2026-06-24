@@ -11,6 +11,13 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.6.0] — 2026-06-24
+
+### Added
+- Download button in the web UI — appears after processing and saves the result as `<original_name>_cleaned.jpg`
+
+---
+
 ## [0.5.0] — 2026-06-24
 
 ### Added
