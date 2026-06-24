@@ -29,12 +29,7 @@
       overflow-y: auto;
     }
 
-    h1 {
-      font-size: 1rem;
-      font-weight: 600;
-      letter-spacing: 0.05em;
-      color: #fff;
-    }
+    h1 { font-size: 1rem; font-weight: 600; letter-spacing: 0.05em; color: #fff; }
 
     .drop-zone {
       border: 2px dashed #444;
@@ -47,7 +42,7 @@
     .drop-zone:hover, .drop-zone.over { border-color: #888; background: #222; }
     .drop-zone input { display: none; }
     .drop-zone p { color: #888; font-size: 0.8rem; }
-    .drop-zone .filename { color: #ccc; font-size: 0.78rem; margin-top: 0.4rem; word-break: break-all; }
+    .drop-zone .fileinfo { color: #ccc; font-size: 0.78rem; margin-top: 0.4rem; word-break: break-all; }
 
     .params { display: flex; flex-direction: column; gap: 1rem; }
 
@@ -112,11 +107,66 @@
     /* ── Main area ── */
     .main {
       flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Navigation bar (multi-file) ── */
+    .film-nav {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 0.75rem;
+      background: #161616;
+      border-bottom: 1px solid #2a2a2a;
+      flex-shrink: 0;
+    }
+
+    .nav-btn {
+      width: auto;
+      padding: 0.25rem 0.65rem;
+      background: #242424;
+      color: #aaa;
+      border: 1px solid #333;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 400;
+      line-height: 1.4;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      flex-shrink: 0;
+    }
+    .nav-btn:hover:not(:disabled) { background: #383838; color: #fff; }
+    .nav-btn:disabled { background: #1a1a1a; color: #3a3a3a; cursor: not-allowed; }
+
+    .nav-center {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.05rem;
+      overflow: hidden;
+    }
+    .nav-filename {
+      font-size: 0.8rem;
+      color: #ccc;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
+    .nav-counter { font-size: 0.7rem; color: #555; font-variant-numeric: tabular-nums; }
+
+    /* ── Image panels ── */
+    .image-area {
+      flex: 1;
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 1px;
       background: #2a2a2a;
       overflow: hidden;
+      min-height: 0;
     }
 
     .image-box {
@@ -158,9 +208,9 @@
     <h1>Film Dust Cleaner</h1>
 
     <div class="drop-zone" id="dropZone">
-      <input type="file" id="fileInput" accept="image/*">
-      <p>Drop a scan here or click to choose</p>
-      <div class="filename" id="filename"></div>
+      <input type="file" id="fileInput" accept="image/*" multiple>
+      <p>Drop scans here or click to choose</p>
+      <div class="fileinfo" id="fileinfo"></div>
     </div>
 
     <div class="params">
@@ -191,7 +241,7 @@
 
     <div class="params">
       <div class="param">
-        <label>Exposure <span class="val" id="exposureVal">0 EV</span></label>
+        <label>Exposure <span class="val" id="exposureVal">+0.0 EV</span></label>
         <input type="range" id="exposure" min="-20" max="20" value="0" step="1">
       </div>
       <div class="param">
@@ -206,95 +256,156 @@
   </aside>
 
   <main class="main">
-    <div class="image-box">
-      <div class="label">Original</div>
-      <img id="originalImg" style="display:none">
-      <div class="placeholder" id="originalPlaceholder">No image loaded</div>
+    <div class="film-nav" id="filmNav" style="display:none">
+      <button class="nav-btn" id="prevBtn" disabled>&#8592;</button>
+      <div class="nav-center">
+        <span class="nav-filename" id="navFilename"></span>
+        <span class="nav-counter" id="navCounter"></span>
+      </div>
+      <button class="nav-btn" id="nextBtn" disabled>&#8594;</button>
     </div>
-    <div class="image-box">
-      <div class="label">Cleaned</div>
-      <img id="cleanedImg" style="display:none">
-      <div class="placeholder" id="cleanedPlaceholder">Result will appear here</div>
+
+    <div class="image-area">
+      <div class="image-box">
+        <div class="label">Original</div>
+        <img id="originalImg" style="display:none">
+        <div class="placeholder" id="originalPlaceholder">No image loaded</div>
+      </div>
+      <div class="image-box">
+        <div class="label">Cleaned</div>
+        <img id="cleanedImg" style="display:none">
+        <div class="placeholder" id="cleanedPlaceholder">Result will appear here</div>
+      </div>
     </div>
   </main>
 
   <script>
-    const dropZone          = document.getElementById('dropZone');
-    const fileInput         = document.getElementById('fileInput');
-    const filename          = document.getElementById('filename');
-    const btn               = document.getElementById('btn');
-    const status            = document.getElementById('status');
-    const originalImg       = document.getElementById('originalImg');
-    const cleanedImg        = document.getElementById('cleanedImg');
+    const dropZone            = document.getElementById('dropZone');
+    const fileInput           = document.getElementById('fileInput');
+    const fileinfoEl          = document.getElementById('fileinfo');
+    const btn                 = document.getElementById('btn');
+    const status              = document.getElementById('status');
+    const originalImg         = document.getElementById('originalImg');
+    const cleanedImg          = document.getElementById('cleanedImg');
     const originalPlaceholder = document.getElementById('originalPlaceholder');
     const cleanedPlaceholder  = document.getElementById('cleanedPlaceholder');
-    const downloadBtn       = document.getElementById('downloadBtn');
+    const downloadBtn         = document.getElementById('downloadBtn');
+    const filmNav             = document.getElementById('filmNav');
+    const prevBtn             = document.getElementById('prevBtn');
+    const nextBtn             = document.getElementById('nextBtn');
+    const navFilename         = document.getElementById('navFilename');
+    const navCounter          = document.getElementById('navCounter');
 
-    let selectedFile = null;
+    let files = [];
+    let currentIndex = 0;
+    const resultCache = new Map(); // index -> { blobURL, downloadName }
     let debounceTimer = null;
     let currentController = null;
 
+    // ── Drop zone ──────────────────────────────────────────
     dropZone.addEventListener('click', () => fileInput.click());
     dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
     dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
     dropZone.addEventListener('drop', e => {
       e.preventDefault();
       dropZone.classList.remove('over');
-      setFile(e.dataTransfer.files[0]);
+      if (e.dataTransfer.files.length) setFiles(e.dataTransfer.files);
     });
-    fileInput.addEventListener('change', () => setFile(fileInput.files[0]));
+    fileInput.addEventListener('change', () => { if (fileInput.files.length) setFiles(fileInput.files); });
 
-    function setFile(file) {
-      if (!file) return;
-      selectedFile = file;
-      filename.textContent = file.name;
-      btn.disabled = false;
-      originalImg.src = URL.createObjectURL(file);
-      originalImg.style.display = 'block';
-      originalPlaceholder.style.display = 'none';
-      cleanedImg.style.display = 'none';
-      cleanedPlaceholder.style.display = 'flex';
-      cleanedPlaceholder.textContent = 'Result will appear here';
-      downloadBtn.style.display = 'none';
-      status.textContent = '';
-      status.className = 'status';
-      scheduleClean();
+    function setFiles(fileList) {
+      files = Array.from(fileList).sort((a, b) => a.name.localeCompare(b.name));
+      resultCache.clear();
+      fileinfoEl.textContent = files.length === 1 ? files[0].name : `${files.length} photos — click to change`;
+      filmNav.style.display = files.length > 1 ? 'flex' : 'none';
+      goTo(0);
     }
 
+    // ── Navigation ─────────────────────────────────────────
+    function goTo(index) {
+      currentIndex = index;
+      const file = files[index];
+
+      navFilename.textContent = file.name;
+      navCounter.textContent = `${index + 1} / ${files.length}`;
+      prevBtn.disabled = index === 0;
+      nextBtn.disabled = index === files.length - 1;
+
+      const prevSrc = originalImg.src;
+      originalImg.src = URL.createObjectURL(file);
+      if (prevSrc && prevSrc.startsWith('blob:')) URL.revokeObjectURL(prevSrc);
+      originalImg.style.display = 'block';
+      originalPlaceholder.style.display = 'none';
+
+      btn.disabled = false;
+      status.textContent = '';
+      status.className = 'status';
+
+      const cached = resultCache.get(index);
+      if (cached) {
+        cleanedImg.src = cached.blobURL;
+        cleanedImg.style.display = 'block';
+        cleanedPlaceholder.style.display = 'none';
+        downloadBtn.href = cached.blobURL;
+        downloadBtn.download = cached.downloadName;
+        downloadBtn.style.display = 'block';
+        status.textContent = 'Done.';
+      } else {
+        cleanedImg.style.display = 'none';
+        cleanedPlaceholder.style.display = 'flex';
+        cleanedPlaceholder.textContent = 'Result will appear here';
+        downloadBtn.style.display = 'none';
+        scheduleClean();
+      }
+    }
+
+    prevBtn.addEventListener('click', () => { if (currentIndex > 0) goTo(currentIndex - 1); });
+    nextBtn.addEventListener('click', () => { if (currentIndex < files.length - 1) goTo(currentIndex + 1); });
+
+    document.addEventListener('keydown', e => {
+      if (!files.length || e.target.tagName === 'INPUT') return;
+      if (e.key === 'ArrowLeft'  && currentIndex > 0)               goTo(currentIndex - 1);
+      if (e.key === 'ArrowRight' && currentIndex < files.length - 1) goTo(currentIndex + 1);
+    });
+
+    // ── Slider bindings ────────────────────────────────────
     [['sigma', 'sigmaVal'], ['threshold', 'thresholdVal'], ['inpaintRadius', 'inpaintRadiusVal']].forEach(([id, valId]) => {
       const el = document.getElementById(id);
       const val = document.getElementById(valId);
-      el.addEventListener('input', () => {
-        val.textContent = el.value;
-        scheduleClean();
-      });
+      el.addEventListener('input', () => { val.textContent = el.value; onSettingChange(); });
     });
 
     const denoiseEl = document.getElementById('denoise');
     const denoiseVal = document.getElementById('denoiseVal');
     denoiseEl.addEventListener('input', () => {
       denoiseVal.textContent = denoiseEl.value === '0' ? 'off' : denoiseEl.value;
-      scheduleClean();
+      onSettingChange();
     });
 
-    document.getElementById('invert').addEventListener('change', scheduleClean);
+    document.getElementById('invert').addEventListener('change', onSettingChange);
 
     const exposureEl = document.getElementById('exposure');
     const exposureVal = document.getElementById('exposureVal');
     exposureEl.addEventListener('input', () => {
       const ev = (exposureEl.value / 10).toFixed(1);
-      exposureVal.textContent = (ev >= 0 ? '+' : '') + ev + ' EV';
-      scheduleClean();
+      exposureVal.textContent = (Number(ev) >= 0 ? '+' : '') + ev + ' EV';
+      onSettingChange();
     });
 
     const contrastEl = document.getElementById('contrast');
     const contrastVal = document.getElementById('contrastVal');
     contrastEl.addEventListener('input', () => {
       contrastVal.textContent = (contrastEl.value / 10).toFixed(1);
-      scheduleClean();
+      onSettingChange();
     });
 
+    function onSettingChange() {
+      resultCache.delete(currentIndex);
+      scheduleClean();
+    }
+
     function scheduleClean() {
+      if (!files.length) return;
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(runClean, 400);
     }
@@ -304,8 +415,11 @@
       runClean();
     });
 
+    // ── Processing ─────────────────────────────────────────
     async function runClean() {
-      if (!selectedFile) return;
+      if (!files.length) return;
+      const index = currentIndex;
+      const file = files[index];
 
       if (currentController) currentController.abort();
       currentController = new AbortController();
@@ -315,7 +429,7 @@
       status.className = 'status';
 
       const form = new FormData();
-      form.append('image', selectedFile);
+      form.append('image', file);
       form.append('sigma', document.getElementById('sigma').value);
       form.append('threshold', document.getElementById('threshold').value);
       form.append('inpaint_radius', document.getElementById('inpaintRadius').value);
@@ -328,22 +442,27 @@
         const res = await fetch('/clean', { method: 'POST', body: form, signal: currentController.signal });
         if (!res.ok) throw new Error(`Server error ${res.status}`);
         const blob = await res.blob();
-        cleanedImg.src = URL.createObjectURL(blob);
-        cleanedImg.style.display = 'block';
-        cleanedPlaceholder.style.display = 'none';
-        status.textContent = 'Done.';
+        const blobURL = URL.createObjectURL(blob);
+        const downloadName = file.name.replace(/(\.[^.]+)$/, '_cleaned$1');
 
-        const base = selectedFile.name.replace(/(\.[^.]+)$/, '_cleaned$1');
-        downloadBtn.href = URL.createObjectURL(blob);
-        downloadBtn.download = base;
-        downloadBtn.style.display = 'block';
+        resultCache.set(index, { blobURL, downloadName });
+
+        if (currentIndex === index) {
+          cleanedImg.src = blobURL;
+          cleanedImg.style.display = 'block';
+          cleanedPlaceholder.style.display = 'none';
+          status.textContent = 'Done.';
+          downloadBtn.href = blobURL;
+          downloadBtn.download = downloadName;
+          downloadBtn.style.display = 'block';
+        }
       } catch (e) {
-        if (e.name !== 'AbortError') {
+        if (e.name !== 'AbortError' && currentIndex === index) {
           status.textContent = e.message;
           status.className = 'status error';
         }
       } finally {
-        btn.disabled = false;
+        if (currentIndex === index) btn.disabled = false;
       }
     }
   </script>

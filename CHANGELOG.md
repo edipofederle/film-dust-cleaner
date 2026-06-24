@@ -11,6 +11,17 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.7.0] — 2026-06-24
+
+### Added
+- Multi-file support in the web UI: drop or select multiple scans at once
+- Navigation bar with ← / → arrows and a `current / total` counter
+- Keyboard navigation with arrow keys (← / →) when focus is not on a slider
+- Per-photo result cache — revisiting a previously processed photo shows the cached result instantly
+- Photos are sorted alphabetically on load
+
+---
+
 ## [0.6.0] — 2026-06-24
 
 ### Added

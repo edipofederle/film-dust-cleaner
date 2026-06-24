@@ -90,7 +90,13 @@ Start a local web UI with live before/after preview and real-time controls.
 film-dust-cleaner serve [--port 3000]
 ```
 
-Open `http://localhost:3000` in your browser. All parameters are available as sliders and update the result automatically. Once processed, a **Download** button appears to save the cleaned image locally (saved as `<original_name>_cleaned.jpg`).
+Open `http://localhost:3000` in your browser. Drop one or multiple scans onto the drop zone.
+
+- **Multi-file**: drag in a whole batch at once; files are sorted alphabetically
+- **Navigate** between photos with the ← / → buttons in the nav bar, or the keyboard arrow keys
+- **Per-photo cache**: navigating back to a photo shows its previously processed result instantly; adjusting a slider re-processes only the current photo
+- All parameters update the result in real time (400 ms debounce)
+- Once processed, a **Download** button appears to save the cleaned image as `<original_name>_cleaned.jpg`
 
 ---
 
