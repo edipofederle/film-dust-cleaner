@@ -11,6 +11,15 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.4.0] — 2026-06-24
+
+### Added
+- Exposure adjustment (`--exposure`, EV stops, -2.0 to +2.0) via CLI and web UI slider
+- Contrast adjustment (`--contrast`, multiplier, 0.5 to 3.0) via CLI and web UI slider
+- Both adjustments are applied as a single linear transform after the full clean pipeline
+
+---
+
 ## [0.3.0] — 2026-06-24
 
 ### Added

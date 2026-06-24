@@ -36,6 +36,8 @@ film-dust-cleaner clean <input> <output> [OPTIONS]
 | `--inpaint-radius` | `5.0` | Neighbourhood radius used during inpainting. Increase for thicker scratches. |
 | `--denoise` | `0.0` | Grain reduction strength. `0` = disabled; `3–15` typical range. |
 | `--invert` | `false` | Treat input as a colour negative and invert before cleaning. |
+| `--exposure` | `0.0` | Exposure adjustment in EV stops (-2.0 to +2.0). Applied after cleaning. |
+| `--contrast` | `1.0` | Contrast multiplier (1.0 = no change, >1 increases contrast). Applied after cleaning. |
 
 ```bash
 # Default — good for heavily scratched scans
@@ -46,6 +48,9 @@ film-dust-cleaner clean scan.jpg cleaned.jpg --threshold 50
 
 # Aggressive with grain reduction
 film-dust-cleaner clean scan.jpg cleaned.jpg --threshold 20 --sigma 20 --denoise 8
+
+# Brighten and boost contrast
+film-dust-cleaner clean scan.jpg cleaned.jpg --exposure 0.5 --contrast 1.3
 
 # Colour negative
 film-dust-cleaner clean neg.jpg positive.jpg --invert

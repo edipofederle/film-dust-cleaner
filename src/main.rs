@@ -33,6 +33,12 @@ enum Command {
         /// Treat input as a colour negative and invert before cleaning
         #[arg(long, default_value_t = false)]
         invert: bool,
+        /// Exposure adjustment in EV stops (-2.0 to +2.0, 0 = no change)
+        #[arg(long, default_value_t = 0.0)]
+        exposure: f64,
+        /// Contrast multiplier (1.0 = no change, >1 increases contrast)
+        #[arg(long, default_value_t = 1.0)]
+        contrast: f64,
     },
     /// Invert a colour negative scan to a positive
     Invert {
@@ -51,8 +57,8 @@ async fn main() {
     let cli = Cli::parse();
 
     match cli.command {
-        Command::Clean { input, output, sigma, threshold, inpaint_radius, denoise, invert } => {
-            if let Err(e) = film_dust_cleaner::clean(&input, &output, sigma, threshold, inpaint_radius, denoise, invert) {
+        Command::Clean { input, output, sigma, threshold, inpaint_radius, denoise, invert, exposure, contrast } => {
+            if let Err(e) = film_dust_cleaner::clean(&input, &output, sigma, threshold, inpaint_radius, denoise, invert, exposure, contrast) {
                 eprintln!("Error: {e}");
                 std::process::exit(1);
             }
@@ -90,6 +96,8 @@ async fn clean_handler(mut multipart: Multipart) -> Result<Response, StatusCode>
     let mut inpaint_radius = 5.0f64;
     let mut denoise = 0.0f32;
     let mut invert = false;
+    let mut exposure = 0.0f64;
+    let mut contrast = 1.0f64;
 
     while let Some(field) = multipart.next_field().await.map_err(|_| StatusCode::BAD_REQUEST)? {
         match field.name().unwrap_or("") {
@@ -111,6 +119,12 @@ async fn clean_handler(mut multipart: Multipart) -> Result<Response, StatusCode>
             "invert" => {
                 invert = field.text().await.map_err(|_| StatusCode::BAD_REQUEST)? == "true";
             }
+            "exposure" => {
+                if let Ok(v) = field.text().await.map_err(|_| StatusCode::BAD_REQUEST)?.parse() { exposure = v; }
+            }
+            "contrast" => {
+                if let Ok(v) = field.text().await.map_err(|_| StatusCode::BAD_REQUEST)?.parse() { contrast = v; }
+            }
             _ => {}
         }
     }
@@ -125,7 +139,7 @@ async fn clean_handler(mut multipart: Multipart) -> Result<Response, StatusCode>
         film_dust_cleaner::clean(
             input.path().to_str().unwrap(),
             output.path().to_str().unwrap(),
-            sigma, threshold, inpaint_radius, denoise, invert,
+            sigma, threshold, inpaint_radius, denoise, invert, exposure, contrast,
         )?;
 
         Ok(fs::read(output.path())?)

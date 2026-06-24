@@ -14,6 +14,8 @@ pub fn clean(
     inpaint_radius: f64,
     denoise_strength: f32,
     invert: bool,
+    exposure: f64,
+    contrast: f64,
 ) -> opencv::Result<()> {
     let img = if invert {
         let color = imgcodecs::imread(input_path, imgcodecs::IMREAD_COLOR)?;
@@ -69,7 +71,19 @@ pub fn clean(
         inpainted
     };
 
-    imgcodecs::imwrite(output_path, &result, &core::Vector::new())?;
+    // Exposure (EV stops) + contrast applied as a single linear transform:
+    //   pixel = (2^exposure * contrast) * pixel + 128 * (1 - contrast)
+    let final_result = if exposure != 0.0 || contrast != 1.0 {
+        let alpha = 2f64.powf(exposure) * contrast;
+        let beta = 128.0 * (1.0 - contrast);
+        let mut adjusted = Mat::default();
+        result.convert_to(&mut adjusted, -1, alpha, beta)?;
+        adjusted
+    } else {
+        result
+    };
+
+    imgcodecs::imwrite(output_path, &final_result, &core::Vector::new())?;
     Ok(())
 }
 

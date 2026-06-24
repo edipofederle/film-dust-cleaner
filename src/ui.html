@@ -90,6 +90,8 @@
     }
     .toggle input[type=checkbox] { accent-color: #888; width: 14px; height: 14px; cursor: pointer; }
 
+    .divider { border: none; border-top: 1px solid #2a2a2a; margin: 0.25rem 0; }
+
     /* ── Main area ── */
     .main {
       flex: 1;
@@ -168,6 +170,19 @@
       <span>Invert negative</span>
     </label>
 
+    <div class="divider"></div>
+
+    <div class="params">
+      <div class="param">
+        <label>Exposure <span class="val" id="exposureVal">0 EV</span></label>
+        <input type="range" id="exposure" min="-20" max="20" value="0" step="1">
+      </div>
+      <div class="param">
+        <label>Contrast <span class="val" id="contrastVal">1.0</span></label>
+        <input type="range" id="contrast" min="5" max="30" value="10" step="1">
+      </div>
+    </div>
+
     <button id="btn" disabled>Clean</button>
     <div class="status" id="status"></div>
   </aside>
@@ -244,6 +259,21 @@
 
     document.getElementById('invert').addEventListener('change', scheduleClean);
 
+    const exposureEl = document.getElementById('exposure');
+    const exposureVal = document.getElementById('exposureVal');
+    exposureEl.addEventListener('input', () => {
+      const ev = (exposureEl.value / 10).toFixed(1);
+      exposureVal.textContent = (ev >= 0 ? '+' : '') + ev + ' EV';
+      scheduleClean();
+    });
+
+    const contrastEl = document.getElementById('contrast');
+    const contrastVal = document.getElementById('contrastVal');
+    contrastEl.addEventListener('input', () => {
+      contrastVal.textContent = (contrastEl.value / 10).toFixed(1);
+      scheduleClean();
+    });
+
     function scheduleClean() {
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(runClean, 400);
@@ -271,6 +301,8 @@
       form.append('inpaint_radius', document.getElementById('inpaintRadius').value);
       form.append('denoise', document.getElementById('denoise').value);
       form.append('invert', document.getElementById('invert').checked ? 'true' : 'false');
+      form.append('exposure', (document.getElementById('exposure').value / 10).toString());
+      form.append('contrast', (document.getElementById('contrast').value / 10).toString());
 
       try {
         const res = await fetch('/clean', { method: 'POST', body: form, signal: currentController.signal });
