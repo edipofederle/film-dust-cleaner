@@ -1,4 +1,4 @@
-# vision-lab
+# film-dust-cleaner
 
 Removes dust and scratches from scanned film photos using local contrast detection and inpainting.
 
@@ -16,16 +16,15 @@ This approach avoids false positives on naturally bright areas (skin highlights,
 ## Build
 
 ```bash
-cd rust-cleaner
 cargo build --release
 ```
 
-The binary will be at `rust-cleaner/target/release/vision-lab-clean`.
+The binary will be at `target/release/film-dust-cleaner`.
 
 ## Usage
 
 ```bash
-vision-lab-clean <input> <output> [OPTIONS]
+film-dust-cleaner <input> <output> [OPTIONS]
 ```
 
 ### Options
@@ -40,13 +39,13 @@ vision-lab-clean <input> <output> [OPTIONS]
 
 ```bash
 # Default settings — good for heavily scratched scans
-vision-lab-clean scan.jpg cleaned.jpg
+film-dust-cleaner scan.jpg cleaned.jpg
 
 # Conservative — safer for cleaner scans
-vision-lab-clean scan.jpg cleaned.jpg --threshold 50
+film-dust-cleaner scan.jpg cleaned.jpg --threshold 50
 
 # Aggressive — for heavy or wide scratches
-vision-lab-clean scan.jpg cleaned.jpg --threshold 20 --sigma 20 --inpaint-radius 7
+film-dust-cleaner scan.jpg cleaned.jpg --threshold 20 --sigma 20 --inpaint-radius 7
 ```
 
 ## References
