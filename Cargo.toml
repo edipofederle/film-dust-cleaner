@@ -6,3 +6,6 @@ edition = "2021"
 [dependencies]
 opencv = { version = "0.94", features = ["clang-runtime"] }
 clap = { version = "4", features = ["derive"] }
+axum = { version = "0.8", features = ["multipart"] }
+tokio = { version = "1", features = ["full"] }
+tempfile = "3"

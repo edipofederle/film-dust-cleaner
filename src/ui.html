@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Film Dust Cleaner</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #111;
+      color: #e0e0e0;
+      height: 100vh;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 260px;
+      flex-shrink: 0;
+      background: #1a1a1a;
+      border-right: 1px solid #2a2a2a;
+      display: flex;
+      flex-direction: column;
+      padding: 1.5rem 1.25rem;
+      gap: 1.25rem;
+      overflow-y: auto;
+    }
+
+    h1 {
+      font-size: 1rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      color: #fff;
+    }
+
+    .drop-zone {
+      border: 2px dashed #444;
+      border-radius: 8px;
+      padding: 1.25rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .drop-zone:hover, .drop-zone.over { border-color: #888; background: #222; }
+    .drop-zone input { display: none; }
+    .drop-zone p { color: #888; font-size: 0.8rem; }
+    .drop-zone .filename { color: #ccc; font-size: 0.78rem; margin-top: 0.4rem; word-break: break-all; }
+
+    .params { display: flex; flex-direction: column; gap: 1rem; }
+
+    .param label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: #aaa;
+      margin-bottom: 0.3rem;
+    }
+    .param label .val { color: #fff; font-variant-numeric: tabular-nums; }
+    .param input[type=range] { width: 100%; accent-color: #888; }
+
+    button {
+      width: 100%;
+      padding: 0.65rem;
+      background: #e0e0e0;
+      color: #111;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover { background: #fff; }
+    button:disabled { background: #333; color: #666; cursor: not-allowed; }
+
+    .status { font-size: 0.78rem; color: #666; text-align: center; min-height: 1em; }
+    .status.error { color: #e07070; }
+
+    /* ── Main area ── */
+    .main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: #2a2a2a;
+      overflow: hidden;
+    }
+
+    .image-box {
+      background: #111;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .image-box .label {
+      font-size: 0.75rem;
+      color: #555;
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid #2a2a2a;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .image-box img {
+      flex: 1;
+      min-height: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      padding: 1rem;
+    }
+    .image-box .placeholder {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #333;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+
+  <aside class="sidebar">
+    <h1>Film Dust Cleaner</h1>
+
+    <div class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" accept="image/*">
+      <p>Drop a scan here or click to choose</p>
+      <div class="filename" id="filename"></div>
+    </div>
+
+    <div class="params">
+      <div class="param">
+        <label>Sigma <span class="val" id="sigmaVal">15</span></label>
+        <input type="range" id="sigma" min="5" max="50" value="15" step="1">
+      </div>
+      <div class="param">
+        <label>Threshold <span class="val" id="thresholdVal">30</span></label>
+        <input type="range" id="threshold" min="5" max="80" value="30" step="1">
+      </div>
+      <div class="param">
+        <label>Inpaint radius <span class="val" id="inpaintRadiusVal">5</span></label>
+        <input type="range" id="inpaintRadius" min="1" max="15" value="5" step="1">
+      </div>
+    </div>
+
+    <button id="btn" disabled>Clean</button>
+    <div class="status" id="status"></div>
+  </aside>
+
+  <main class="main">
+    <div class="image-box">
+      <div class="label">Original</div>
+      <img id="originalImg" style="display:none">
+      <div class="placeholder" id="originalPlaceholder">No image loaded</div>
+    </div>
+    <div class="image-box">
+      <div class="label">Cleaned</div>
+      <img id="cleanedImg" style="display:none">
+      <div class="placeholder" id="cleanedPlaceholder">Result will appear here</div>
+    </div>
+  </main>
+
+  <script>
+    const dropZone          = document.getElementById('dropZone');
+    const fileInput         = document.getElementById('fileInput');
+    const filename          = document.getElementById('filename');
+    const btn               = document.getElementById('btn');
+    const status            = document.getElementById('status');
+    const originalImg       = document.getElementById('originalImg');
+    const cleanedImg        = document.getElementById('cleanedImg');
+    const originalPlaceholder = document.getElementById('originalPlaceholder');
+    const cleanedPlaceholder  = document.getElementById('cleanedPlaceholder');
+
+    let selectedFile = null;
+    let debounceTimer = null;
+    let currentController = null;
+
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('over');
+      setFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', () => setFile(fileInput.files[0]));
+
+    function setFile(file) {
+      if (!file) return;
+      selectedFile = file;
+      filename.textContent = file.name;
+      btn.disabled = false;
+      originalImg.src = URL.createObjectURL(file);
+      originalImg.style.display = 'block';
+      originalPlaceholder.style.display = 'none';
+      cleanedImg.style.display = 'none';
+      cleanedPlaceholder.style.display = 'flex';
+      cleanedPlaceholder.textContent = 'Result will appear here';
+      status.textContent = '';
+      status.className = 'status';
+      scheduleClean();
+    }
+
+    [['sigma', 'sigmaVal'], ['threshold', 'thresholdVal'], ['inpaintRadius', 'inpaintRadiusVal']].forEach(([id, valId]) => {
+      const el = document.getElementById(id);
+      const val = document.getElementById(valId);
+      el.addEventListener('input', () => {
+        val.textContent = el.value;
+        scheduleClean();
+      });
+    });
+
+    function scheduleClean() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(runClean, 400);
+    }
+
+    btn.addEventListener('click', () => {
+      clearTimeout(debounceTimer);
+      runClean();
+    });
+
+    async function runClean() {
+      if (!selectedFile) return;
+
+      if (currentController) currentController.abort();
+      currentController = new AbortController();
+
+      btn.disabled = true;
+      status.textContent = 'Processing…';
+      status.className = 'status';
+
+      const form = new FormData();
+      form.append('image', selectedFile);
+      form.append('sigma', document.getElementById('sigma').value);
+      form.append('threshold', document.getElementById('threshold').value);
+      form.append('inpaint_radius', document.getElementById('inpaintRadius').value);
+
+      try {
+        const res = await fetch('/clean', { method: 'POST', body: form, signal: currentController.signal });
+        if (!res.ok) throw new Error(`Server error ${res.status}`);
+        const blob = await res.blob();
+        cleanedImg.src = URL.createObjectURL(blob);
+        cleanedImg.style.display = 'block';
+        cleanedPlaceholder.style.display = 'none';
+        status.textContent = 'Done.';
+      } catch (e) {
+        if (e.name !== 'AbortError') {
+          status.textContent = e.message;
+          status.className = 'status error';
+        }
+      } finally {
+        btn.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>
