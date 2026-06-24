@@ -1,0 +1,44 @@
+# Changelog
+
+All notable changes to this project will be documented here.
+
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+---
+
+## [Unreleased]
+
+---
+
+## [0.3.0] — 2026-06-24
+
+### Added
+- Grain reduction via `fastNlMeansDenoising` (`--denoise` flag, slider in web UI)
+- Negative inversion: bitwise NOT + per-channel auto-levels to neutralise the orange mask (`--invert` flag, toggle in web UI)
+- New `invert` CLI subcommand for standalone negative-to-positive conversion
+- `research.md` documenting professional lab techniques and future implementation candidates
+
+### Changed
+- CLI restructured into subcommands: `clean`, `invert`, `serve`
+
+---
+
+## [0.2.0] — 2026-06-24
+
+### Added
+- Local web UI served by an Axum HTTP server (`serve` subcommand)
+- Before/after split view with sidebar controls
+- Real-time parameter adjustment: sliders debounce at 400 ms and cancel in-flight requests
+
+### Changed
+- Core logic extracted into `lib.rs` for reuse across CLI and server
+
+---
+
+## [0.1.0] — 2026-06-24
+
+### Added
+- Dust and scratch removal using local contrast detection (Gaussian background estimation + TELEA inpainting)
+- CLI with configurable `--sigma`, `--threshold`, and `--inpaint-radius`
+- Rust port of original Python/OpenCV prototype

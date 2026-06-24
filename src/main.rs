@@ -17,6 +17,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    /// Remove dust, scratches, and optionally grain from a scan
     Clean {
         input: String,
         output: String,
@@ -26,7 +27,19 @@ enum Command {
         threshold: f64,
         #[arg(long, default_value_t = 5.0)]
         inpaint_radius: f64,
+        /// Grain reduction strength (0 = disabled, 3–15 typical range)
+        #[arg(long, default_value_t = 0.0)]
+        denoise: f32,
+        /// Treat input as a colour negative and invert before cleaning
+        #[arg(long, default_value_t = false)]
+        invert: bool,
     },
+    /// Invert a colour negative scan to a positive
+    Invert {
+        input: String,
+        output: String,
+    },
+    /// Start the web UI server
     Serve {
         #[arg(long, default_value_t = 3000)]
         port: u16,
@@ -38,8 +51,15 @@ async fn main() {
     let cli = Cli::parse();
 
     match cli.command {
-        Command::Clean { input, output, sigma, threshold, inpaint_radius } => {
-            if let Err(e) = film_dust_cleaner::clean(&input, &output, sigma, threshold, inpaint_radius) {
+        Command::Clean { input, output, sigma, threshold, inpaint_radius, denoise, invert } => {
+            if let Err(e) = film_dust_cleaner::clean(&input, &output, sigma, threshold, inpaint_radius, denoise, invert) {
+                eprintln!("Error: {e}");
+                std::process::exit(1);
+            }
+            println!("Saved to {output}");
+        }
+        Command::Invert { input, output } => {
+            if let Err(e) = film_dust_cleaner::invert_negative(&input, &output) {
                 eprintln!("Error: {e}");
                 std::process::exit(1);
             }
@@ -49,7 +69,7 @@ async fn main() {
             let app = Router::new()
                 .route("/", get(index))
                 .route("/clean", post(clean_handler))
-                .layer(DefaultBodyLimit::max(50 * 1024 * 1024)); // 50 MB
+                .layer(DefaultBodyLimit::max(50 * 1024 * 1024));
 
             let addr = format!("0.0.0.0:{port}");
             let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
@@ -68,6 +88,8 @@ async fn clean_handler(mut multipart: Multipart) -> Result<Response, StatusCode>
     let mut sigma = 15.0f64;
     let mut threshold = 30.0f64;
     let mut inpaint_radius = 5.0f64;
+    let mut denoise = 0.0f32;
+    let mut invert = false;
 
     while let Some(field) = multipart.next_field().await.map_err(|_| StatusCode::BAD_REQUEST)? {
         match field.name().unwrap_or("") {
@@ -75,19 +97,19 @@ async fn clean_handler(mut multipart: Multipart) -> Result<Response, StatusCode>
                 image_data = Some(field.bytes().await.map_err(|_| StatusCode::BAD_REQUEST)?.to_vec());
             }
             "sigma" => {
-                if let Ok(v) = field.text().await.map_err(|_| StatusCode::BAD_REQUEST)?.parse() {
-                    sigma = v;
-                }
+                if let Ok(v) = field.text().await.map_err(|_| StatusCode::BAD_REQUEST)?.parse() { sigma = v; }
             }
             "threshold" => {
-                if let Ok(v) = field.text().await.map_err(|_| StatusCode::BAD_REQUEST)?.parse() {
-                    threshold = v;
-                }
+                if let Ok(v) = field.text().await.map_err(|_| StatusCode::BAD_REQUEST)?.parse() { threshold = v; }
             }
             "inpaint_radius" => {
-                if let Ok(v) = field.text().await.map_err(|_| StatusCode::BAD_REQUEST)?.parse() {
-                    inpaint_radius = v;
-                }
+                if let Ok(v) = field.text().await.map_err(|_| StatusCode::BAD_REQUEST)?.parse() { inpaint_radius = v; }
+            }
+            "denoise" => {
+                if let Ok(v) = field.text().await.map_err(|_| StatusCode::BAD_REQUEST)?.parse() { denoise = v; }
+            }
+            "invert" => {
+                invert = field.text().await.map_err(|_| StatusCode::BAD_REQUEST)? == "true";
             }
             _ => {}
         }
@@ -103,9 +125,7 @@ async fn clean_handler(mut multipart: Multipart) -> Result<Response, StatusCode>
         film_dust_cleaner::clean(
             input.path().to_str().unwrap(),
             output.path().to_str().unwrap(),
-            sigma,
-            threshold,
-            inpaint_radius,
+            sigma, threshold, inpaint_radius, denoise, invert,
         )?;
 
         Ok(fs::read(output.path())?)

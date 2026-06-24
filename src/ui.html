@@ -79,6 +79,17 @@
     .status { font-size: 0.78rem; color: #666; text-align: center; min-height: 1em; }
     .status.error { color: #e07070; }
 
+    .toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      color: #aaa;
+      cursor: pointer;
+      user-select: none;
+    }
+    .toggle input[type=checkbox] { accent-color: #888; width: 14px; height: 14px; cursor: pointer; }
+
     /* ── Main area ── */
     .main {
       flex: 1;
@@ -146,7 +157,16 @@
         <label>Inpaint radius <span class="val" id="inpaintRadiusVal">5</span></label>
         <input type="range" id="inpaintRadius" min="1" max="15" value="5" step="1">
       </div>
+      <div class="param">
+        <label>Denoise <span class="val" id="denoiseVal">off</span></label>
+        <input type="range" id="denoise" min="0" max="20" value="0" step="1">
+      </div>
     </div>
+
+    <label class="toggle">
+      <input type="checkbox" id="invert">
+      <span>Invert negative</span>
+    </label>
 
     <button id="btn" disabled>Clean</button>
     <div class="status" id="status"></div>
@@ -215,6 +235,15 @@
       });
     });
 
+    const denoiseEl = document.getElementById('denoise');
+    const denoiseVal = document.getElementById('denoiseVal');
+    denoiseEl.addEventListener('input', () => {
+      denoiseVal.textContent = denoiseEl.value === '0' ? 'off' : denoiseEl.value;
+      scheduleClean();
+    });
+
+    document.getElementById('invert').addEventListener('change', scheduleClean);
+
     function scheduleClean() {
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(runClean, 400);
@@ -240,6 +269,8 @@
       form.append('sigma', document.getElementById('sigma').value);
       form.append('threshold', document.getElementById('threshold').value);
       form.append('inpaint_radius', document.getElementById('inpaintRadius').value);
+      form.append('denoise', document.getElementById('denoise').value);
+      form.append('invert', document.getElementById('invert').checked ? 'true' : 'false');
 
       try {
         const res = await fetch('/clean', { method: 'POST', body: form, signal: currentController.signal });
