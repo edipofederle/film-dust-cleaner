@@ -11,6 +11,16 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.5.0] — 2026-06-24
+
+### Added
+- Configuration file support (`film-dust-cleaner.toml` in current directory, or
+  `~/.config/film-dust-cleaner/config.toml` as user-level config)
+- `output_dir` config key: when set, the CLI `output` argument becomes optional and
+  cleaned files are saved as `<output_dir>/<input_filename>`
+
+---
+
 ## [0.4.0] — 2026-06-24
 
 ### Added

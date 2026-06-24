@@ -72,6 +72,21 @@ film-dust-cleaner serve [--port 3000]
 
 Opens a browser UI at `http://localhost:<port>` with live before/after preview and real-time slider adjustment.
 
+## Configuration
+
+A TOML config file is loaded automatically from the first location found:
+
+1. `./film-dust-cleaner.toml` — project-local config
+2. `~/.config/film-dust-cleaner/config.toml` — user config
+
+```toml
+# ~/.config/film-dust-cleaner/config.toml
+output_dir = "~/Pictures/cleaned"
+```
+
+When `output_dir` is set, the CLI `output` argument becomes optional and cleaned
+files are saved as `<output_dir>/<input_filename>`.
+
 ## Tuning guide
 
 - If scratches remain → lower `--threshold` or raise `--sigma`.

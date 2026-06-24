@@ -8,6 +8,9 @@ use axum::{
 use clap::{Parser, Subcommand};
 use std::fs;
 
+mod config;
+use config::Config;
+
 #[derive(Parser)]
 #[command(about = "Remove dust and scratches from scanned film photos.")]
 struct Cli {
@@ -20,7 +23,8 @@ enum Command {
     /// Remove dust, scratches, and optionally grain from a scan
     Clean {
         input: String,
-        output: String,
+        /// Output path. If omitted, output_dir from config is used.
+        output: Option<String>,
         #[arg(long, default_value_t = 15.0)]
         sigma: f64,
         #[arg(long, default_value_t = 30.0)]
@@ -56,8 +60,14 @@ enum Command {
 async fn main() {
     let cli = Cli::parse();
 
+    let config = Config::load();
+
     match cli.command {
         Command::Clean { input, output, sigma, threshold, inpaint_radius, denoise, invert, exposure, contrast } => {
+            let output = match config.resolve_output(&input, output) {
+                Ok(p) => p,
+                Err(e) => { eprintln!("Error: {e}"); std::process::exit(1); }
+            };
             if let Err(e) = film_dust_cleaner::clean(&input, &output, sigma, threshold, inpaint_radius, denoise, invert, exposure, contrast) {
                 eprintln!("Error: {e}");
                 std::process::exit(1);
