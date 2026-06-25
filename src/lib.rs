@@ -6,6 +6,23 @@ use opencv::{
     prelude::*,
 };
 
+// BGR → grayscale: ITU-R BT.601 coefficients (matches OpenCV's cvt_color)
+fn bgr_to_gray_pure(img: &Mat) -> opencv::Result<Mat> {
+    let rows = img.rows() as usize;
+    let cols = img.cols() as usize;
+    let src = img.data_bytes()?;
+    let mut result_data = vec![0u8; rows * cols];
+    for i in 0..rows * cols {
+        let b = src[i * 3] as f32;
+        let g = src[i * 3 + 1] as f32;
+        let r = src[i * 3 + 2] as f32;
+        result_data[i] = (0.114 * b + 0.587 * g + 0.299 * r).round() as u8;
+    }
+    let mut result = unsafe { Mat::new_rows_cols(rows as i32, cols as i32, core::CV_8UC1)? };
+    result.data_bytes_mut()?.copy_from_slice(&result_data);
+    Ok(result)
+}
+
 pub fn clean(
     input_path: &str,
     output_path: &str,
@@ -23,9 +40,7 @@ pub fn clean(
             return Err(opencv::Error::new(core::StsError, format!("Could not read image: {}", input_path)));
         }
         let inverted = invert_mat(&color)?;
-        let mut gray = Mat::default();
-        imgproc::cvt_color(&inverted, &mut gray, imgproc::COLOR_BGR2GRAY, 0, core::AlgorithmHint::ALGO_HINT_DEFAULT)?;
-        gray
+        bgr_to_gray_pure(&inverted)?
     } else {
         let img = imgcodecs::imread(input_path, imgcodecs::IMREAD_GRAYSCALE)?;
         if img.empty() {

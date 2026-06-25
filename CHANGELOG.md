@@ -11,6 +11,15 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.10.0] — 2026-06-25
+
+### Changed
+- BGR→Gray conversion replaced with a pure-Rust ITU-R BT.601 weighted average,
+  removing the `imgproc::cvt_color` OpenCV call and fixing the Docker build which
+  used an older OpenCV version where that call had a different signature
+
+---
+
 ## [0.9.0] — 2026-06-25
 
 ### Added

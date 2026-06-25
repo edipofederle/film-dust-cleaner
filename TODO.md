@@ -17,7 +17,7 @@ can be replaced in pure Rust. Everything except TELEA inpainting is straightforw
 - [ ] `core::bitwise_not` → `255 - pixel` per channel
 - [ ] `core::split` / `core::merge` → iterate channels manually
 - [ ] `core::normalize` (NORM_MINMAX) → find min/max, rescale linearly
-- [ ] `imgproc::cvt_color` BGR→Gray → weighted average: `0.114·B + 0.587·G + 0.299·R`
+- [x] `imgproc::cvt_color` BGR→Gray → weighted average: `0.114·B + 0.587·G + 0.299·R`
 
 ### Easy — standard algorithms
 
