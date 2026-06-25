@@ -11,6 +11,16 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.8.0] — 2026-06-25
+
+### Changed
+- Gaussian blur replaced with a pure-Rust separable 1D convolution (horizontal then vertical
+  pass), removing the `imgproc::gaussian_blur` OpenCV call
+- Morphological dilation replaced with a pure-Rust 3×3 max filter (2 iterations), removing
+  the `imgproc::dilate` and `imgproc::get_structuring_element` OpenCV calls
+
+---
+
 ## [0.7.0] — 2026-06-24
 
 ### Added

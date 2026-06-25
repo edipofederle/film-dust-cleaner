@@ -1,5 +1,5 @@
 use opencv::{
-    core::{self, Mat, Point, Size},
+    core::{self, Mat},
     imgcodecs,
     imgproc,
     photo,
@@ -34,14 +34,7 @@ pub fn clean(
         img
     };
 
-    let mut background = Mat::default();
-    imgproc::gaussian_blur(
-        &img, &mut background,
-        Size::new(0, 0),
-        sigma, sigma,
-        core::BORDER_DEFAULT,
-        core::AlgorithmHint::ALGO_HINT_DEFAULT,
-    )?;
+    let background = gaussian_blur_pure(&img, sigma)?;
 
     let mut diff = Mat::default();
     core::subtract(&img, &background, &mut diff, &core::no_array(), -1)?;
@@ -49,16 +42,7 @@ pub fn clean(
     let mut scratch_mask = Mat::default();
     imgproc::threshold(&diff, &mut scratch_mask, threshold, 255.0, imgproc::THRESH_BINARY)?;
 
-    let kernel = imgproc::get_structuring_element(
-        imgproc::MORPH_RECT, Size::new(3, 3), Point::new(-1, -1),
-    )?;
-    let mut dilated_mask = Mat::default();
-    imgproc::dilate(
-        &scratch_mask, &mut dilated_mask, &kernel,
-        Point::new(-1, -1), 2,
-        core::BORDER_CONSTANT,
-        imgproc::morphology_default_border_value()?,
-    )?;
+    let dilated_mask = dilate_3x3_pure(&scratch_mask, 2)?;
 
     let mut inpainted = Mat::default();
     photo::inpaint(&img, &dilated_mask, &mut inpainted, inpaint_radius, photo::INPAINT_TELEA)?;
@@ -95,6 +79,84 @@ pub fn invert_negative(input_path: &str, output_path: &str) -> opencv::Result<()
     let result = invert_mat(&img)?;
     imgcodecs::imwrite(output_path, &result, &core::Vector::new())?;
     Ok(())
+}
+
+fn gaussian_blur_pure(img: &Mat, sigma: f64) -> opencv::Result<Mat> {
+    let rows = img.rows() as usize;
+    let cols = img.cols() as usize;
+    let src = img.data_bytes()?;
+
+    let half = (3.0 * sigma).ceil() as usize;
+    let ksize = 2 * half + 1;
+    let kernel: Vec<f64> = (0..ksize)
+        .map(|i| {
+            let x = i as f64 - half as f64;
+            (-x * x / (2.0 * sigma * sigma)).exp()
+        })
+        .collect();
+    let ksum: f64 = kernel.iter().sum();
+    let kernel: Vec<f64> = kernel.iter().map(|v| v / ksum).collect();
+
+    // Horizontal pass — accumulate into f32 to preserve precision
+    let mut horiz = vec![0f32; rows * cols];
+    for r in 0..rows {
+        for c in 0..cols {
+            let mut acc = 0f64;
+            for (ki, &kv) in kernel.iter().enumerate() {
+                let offset = ki as isize - half as isize;
+                let sc = (c as isize + offset).clamp(0, cols as isize - 1) as usize;
+                acc += kv * src[r * cols + sc] as f64;
+            }
+            horiz[r * cols + c] = acc as f32;
+        }
+    }
+
+    // Vertical pass — write final u8 result
+    let mut result_data = vec![0u8; rows * cols];
+    for r in 0..rows {
+        for c in 0..cols {
+            let mut acc = 0f64;
+            for (ki, &kv) in kernel.iter().enumerate() {
+                let offset = ki as isize - half as isize;
+                let sr = (r as isize + offset).clamp(0, rows as isize - 1) as usize;
+                acc += kv * horiz[sr * cols + c] as f64;
+            }
+            result_data[r * cols + c] = acc.round().clamp(0.0, 255.0) as u8;
+        }
+    }
+
+    let mut result = unsafe { Mat::new_rows_cols(rows as i32, cols as i32, core::CV_8UC1)? };
+    result.data_bytes_mut()?.copy_from_slice(&result_data);
+    Ok(result)
+}
+
+// 3×3 morphological dilation (max filter), run `iterations` times.
+fn dilate_3x3_pure(mask: &Mat, iterations: i32) -> opencv::Result<Mat> {
+    let rows = mask.rows() as usize;
+    let cols = mask.cols() as usize;
+    let mut src: Vec<u8> = mask.data_bytes()?.to_vec();
+    let mut dst = vec![0u8; rows * cols];
+
+    for _ in 0..iterations {
+        for r in 0..rows {
+            for c in 0..cols {
+                let mut max_val = 0u8;
+                for dr in -1isize..=1 {
+                    for dc in -1isize..=1 {
+                        let nr = (r as isize + dr).clamp(0, rows as isize - 1) as usize;
+                        let nc = (c as isize + dc).clamp(0, cols as isize - 1) as usize;
+                        max_val = max_val.max(src[nr * cols + nc]);
+                    }
+                }
+                dst[r * cols + c] = max_val;
+            }
+        }
+        std::mem::swap(&mut src, &mut dst);
+    }
+
+    let mut result = unsafe { Mat::new_rows_cols(rows as i32, cols as i32, core::CV_8UC1)? };
+    result.data_bytes_mut()?.copy_from_slice(&src);
+    Ok(result)
 }
 
 fn invert_mat(img: &Mat) -> opencv::Result<Mat> {

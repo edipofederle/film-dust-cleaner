@@ -21,9 +21,9 @@ can be replaced in pure Rust. Everything except TELEA inpainting is straightforw
 
 ### Easy — standard algorithms
 
-- [ ] `imgproc::gaussian_blur` → separable 1D convolution applied horizontally then
+- [x] `imgproc::gaussian_blur` → separable 1D convolution applied horizontally then
   vertically; or use the `imageproc` crate which already provides this
-- [ ] `imgproc::dilate` (3×3 rect kernel) → 3×3 max filter over each pixel
+- [x] `imgproc::dilate` (3×3 rect kernel) → 3×3 max filter over each pixel
 
 ### Medium — more involved but well-documented
 
