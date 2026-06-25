@@ -11,6 +11,15 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.9.0] — 2026-06-25
+
+### Added
+- `Dockerfile` — multi-stage build (rust:bookworm builder → debian:bookworm-slim runtime)
+- `docker-compose.yml` — `docker compose up --build` starts the web UI on port 3000
+- `.dockerignore` — excludes `target/` and `.git/` from build context
+
+---
+
 ## [0.8.0] — 2026-06-25
 
 ### Changed

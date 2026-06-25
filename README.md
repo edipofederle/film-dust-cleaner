@@ -27,6 +27,36 @@ Binary: `target/release/film-dust-cleaner`
 
 ---
 
+## Docker
+
+No local Rust or OpenCV installation required.
+
+```bash
+# Build image and start the web UI
+docker compose up --build
+
+# Open http://localhost:3000
+```
+
+The first build takes a few minutes (compiling OpenCV dev headers and Rust dependencies). Subsequent builds reuse cached layers and are much faster.
+
+To run a one-off CLI command against a local file:
+
+```bash
+docker compose run --rm film-dust-cleaner \
+  ./film-dust-cleaner clean /scans/scan.jpg /scans/cleaned.jpg
+```
+
+Mount a local directory to pass files in:
+
+```bash
+docker run --rm -v "$PWD/scans:/scans" \
+  $(docker compose images -q film-dust-cleaner) \
+  ./film-dust-cleaner clean /scans/scan.jpg /scans/cleaned.jpg
+```
+
+---
+
 ## Commands
 
 ### `clean`
