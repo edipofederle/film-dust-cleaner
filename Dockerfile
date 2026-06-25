@@ -10,8 +10,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Pre-fetch crates so this layer is cached unless Cargo.lock changes
+# Pre-fetch crates so this layer is cached unless Cargo.lock changes.
+# Cargo needs src/lib.rs and src/main.rs to exist to parse the manifest.
 COPY Cargo.toml Cargo.lock ./
+RUN mkdir -p src && touch src/lib.rs && echo 'fn main(){}' > src/main.rs
 RUN cargo fetch
 
 COPY src ./src
